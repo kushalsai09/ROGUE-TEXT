@@ -37,6 +37,7 @@ uploads/*
 
 # Large files
 *.mp4
+!demo/*.mp4
 *.wav
 *.mp3
 *.avi
@@ -55,4 +56,4 @@ log/
 # Environment variables
 .env
 .env.local
-.env.*.local 
+.env.*.local

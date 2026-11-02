@@ -1,7 +1,7 @@
 from flask import Flask, jsonify, render_template, request, flash, redirect, url_for
 import groq
-client = groq.Groq(api_key="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")
 import os
+from dotenv import load_dotenv
 from revised_silence_detection import improved_silence_detection
 import subprocess
 import requests
@@ -14,6 +14,7 @@ import whisper
 import ffmpeg
 import gc
 
+load_dotenv()
 
 cwd = os.getcwd()
 
@@ -37,12 +38,12 @@ def insert_silences_into_transcript(transcript_content, silence_threshold=0.5):
     return '\n'.join(new_transcript_lines)
 
 
-app = Flask(_name_)
+app = Flask(__name__)
 
 UPLOAD_FOLDER = 'uploads'
 ALLOWED_EXTENSIONS = {'mp4', 'avi', 'mov'}
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
-app.secret_key = "secret_key"
+app.secret_key = os.environ.get("FLASK_SECRET_KEY", "development-only-secret")
 
 
 def allowed_file(filename):
@@ -170,10 +171,13 @@ def insert_silences_into_transcript(transcript, silence_ranges):
     return new_transcript
 
 def transcribe_audio_with_Deepgram(audio_path):
+            deepgram_api_key = os.environ.get("DEEPGRAM_API_KEY")
+            if not deepgram_api_key:
+                raise RuntimeError("DEEPGRAM_API_KEY is not configured")
             url = "https://api.deepgram.com/v1/listen?model=nova-2&language=en&punctuate=true&diarize=true&smart_format=true"
             #url = "https://api.deepgram.com/v1/listen?model=whisper-large&detect_language=true"
             headers = {
-                "Authorization": 'Token ' + '476cfafd77017a56bca84579c2951fb3d0877e4c',
+                "Authorization": f"Token {deepgram_api_key}",
                 "Content-Type": "audio/mpeg"
             }
 
@@ -370,6 +374,10 @@ def download(filename):
 
 
 def generate_title(transcript):
+    groq_api_key = os.environ.get("GROQ_API_KEY")
+    if not groq_api_key:
+        raise RuntimeError("GROQ_API_KEY is not configured")
+    client = groq.Groq(api_key=groq_api_key)
     chat_completion = client.chat.completions.create(
         messages=[
             {"role": "system", "content": "Generate a short and catchy title for the following video transcript, only generate one and only output the title and nothing else."},
@@ -388,7 +396,7 @@ def generate_title_route():
 
 
 
-if _name_ == '_main_':
+if __name__ == '__main__':
     if not os.path.exists(UPLOAD_FOLDER):
         os.makedirs(UPLOAD_FOLDER)
     
